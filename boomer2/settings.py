@@ -82,3 +82,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.7/howto/static-files/
 
 STATIC_URL = '/static/'
+
+# When everything will be okay,
+# When you are sure to have correctly migrated all the users
+# from the old table to the new one
+# tells django to user your custom class and not the default one
+AUTH_USER_MODEL = 'note.MyUser'
