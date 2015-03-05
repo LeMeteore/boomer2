@@ -2,6 +2,8 @@ from django.db import models
 from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.models import AbstractBaseUser, Permission, Group
+from django.core.mail import send_mail
+from django.utils import timezone
 
 # Create your models here.
 class Note(models.Model):
@@ -90,9 +92,56 @@ class MyPermissionsMixin(models.Model):
 
 
 
-# I have extended AbstractBaseUser because,
-# extending AbstractUser resulted in clashes about groups and permissions
-# this custom User class is not yet complete
-# this custom User class is not yet the default used by django.
+# to make this custom User class complete
+# I was obliged to copy the whole AbstractUser class attributes
+# from django.contrib.auth.models
+
+# and I have added my custom field: is_devops = True
+# and I have removed the abstract = True inside class Meta
+
+# this is just for demonstration
+# you'll need to add custom forms for creation/modifications
+# and probably a custom manager for a proper user creation
 class MyUser(AbstractBaseUser, MyPermissionsMixin):
     is_devops = True
+    username = models.CharField(_('username'), max_length=30, unique=True,
+        help_text=_('Required. 30 characters or fewer. Letters, digits and '
+                    '@/./+/-/_ only.'))
+    first_name = models.CharField(_('first name'), max_length=30, blank=True)
+    last_name = models.CharField(_('last name'), max_length=30, blank=True)
+    email = models.EmailField(_('email address'), blank=True)
+    is_staff = models.BooleanField(_('staff status'), default=False,
+        help_text=_('Designates whether the user can log into this admin '
+                    'site.'))
+    is_active = models.BooleanField(_('active'), default=True,
+        help_text=_('Designates whether this user should be treated as '
+                    'active. Unselect this instead of deleting accounts.'))
+    date_joined = models.DateTimeField(_('date joined'), default=timezone.now)
+
+    # you will probably have to write a custom user manager
+    # that will take care of a proper user creation, etc...
+    # objects = MyUserManager()
+
+    USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = ['email']
+
+    class Meta:
+        verbose_name = _('user')
+        verbose_name_plural = _('users')
+
+    def get_full_name(self):
+        """
+        Returns the first_name plus the last_name, with a space in between.
+        """
+        full_name = '%s %s' % (self.first_name, self.last_name)
+        return full_name.strip()
+
+    def get_short_name(self):
+        "Returns the short name for the user."
+        return self.first_name
+
+    def email_user(self, subject, message, from_email=None, **kwargs):
+        """
+        Sends an email to this User.
+        """
+        send_mail(subject, message, from_email, [self.email], **kwargs)
